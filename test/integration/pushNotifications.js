@@ -10,6 +10,8 @@ var log = require('npmlog');
 log.debug = log.verbose;
 log.level = 'info';
 
+var sjcl = require('sjcl');
+
 var WalletService = require('../../lib/server');
 var PushNotificationsService = require('../../lib/pushnotificationsservice');
 
@@ -36,11 +38,24 @@ describe('Push notifications', function() {
           var i = 0;
           async.eachSeries(w.copayers, function(copayer, next) {
             helpers.getAuthServer(copayer.id, function(server) {
-              server.savePreferences({
-                email: 'copayer' + (++i) + '@domain.com',
-                language: 'en',
-                unit: 'bit',
-              }, next);
+              async.parallel([
+
+                function(done) {
+                  server.savePreferences({
+                    email: 'copayer' + (++i) + '@domain.com',
+                    language: 'en',
+                    unit: 'bit',
+                  }, done);
+                },
+                function(done) {
+                  server.pushNotificationsSubscribe({
+                    token: '1234',
+                    packageName: 'com.wallet',
+                    platform: 'Android',
+                  }, done);
+                },
+              ], next);
+
             });
           }, function(err) {
             should.not.exist(err);
@@ -57,10 +72,10 @@ describe('Push notifications', function() {
               pushNotificationsOpts: {
                 templatePath: './lib/templates',
                 defaultLanguage: 'en',
-                defaultUnit: 'btc',
+                defaultUnit: 'dgb',
                 subjectPrefix: '',
-
-                pushServerUrl: 'http://localhost:8000/send',
+                pushServerUrl: 'http://localhost:8000',
+                authorizationKey: 'secret',
               },
             }, function(err) {
               should.not.exist(err);
@@ -93,8 +108,9 @@ describe('Push notifications', function() {
                 return c.args[0];
               });
               calls.length.should.equal(1);
-              args[0].body.android.data.title.should.contain('New payment received');
-              args[0].body.android.data.message.should.contain('123,000');
+              args[0].body.notification.title.should.contain('New payment received');
+              args[0].body.notification.body.should.contain('123,000');
+              args[0].body.notification.body.should.contain('bits');
               done();
             }, 100);
           });
@@ -143,6 +159,29 @@ describe('Push notifications', function() {
         });
       });
     });
+
+    it('should notify copayers when tx is confirmed if they are subscribed', function(done) {
+      server.createAddress({}, function(err, address) {
+        should.not.exist(err);
+
+        server.txConfirmationSubscribe({
+          txid: '123'
+        }, function(err) {
+          should.not.exist(err);
+
+          // Simulate tx confirmation notification
+          server._notify('TxConfirmation', {
+            txid: '123',
+          }, function(err) {
+            setTimeout(function() {
+              var calls = requestStub.getCalls();
+              calls.length.should.equal(1);
+              done();
+            }, 100);
+          });
+        });
+      });
+    });
   });
 
   describe('Shared wallet', function() {
@@ -154,11 +193,24 @@ describe('Push notifications', function() {
           var i = 0;
           async.eachSeries(w.copayers, function(copayer, next) {
             helpers.getAuthServer(copayer.id, function(server) {
-              server.savePreferences({
-                email: 'copayer' + (++i) + '@domain.com',
-                language: 'en',
-                unit: 'bit',
-              }, next);
+              async.parallel([
+
+                function(done) {
+                  server.savePreferences({
+                    email: 'copayer' + (++i) + '@domain.com',
+                    language: 'en',
+                    unit: 'bit',
+                  }, done);
+                },
+                function(done) {
+                  server.pushNotificationsSubscribe({
+                    token: '1234',
+                    packageName: 'com.wallet',
+                    platform: 'Android',
+                  }, done);
+                },
+              ], next);
+
             });
           }, function(err) {
             should.not.exist(err);
@@ -175,10 +227,10 @@ describe('Push notifications', function() {
               pushNotificationsOpts: {
                 templatePath: './lib/templates',
                 defaultLanguage: 'en',
-                defaultUnit: 'btc',
+                defaultUnit: 'dgb',
                 subjectPrefix: '',
-
-                pushServerUrl: 'http://localhost:8000/send',
+                pushServerUrl: 'http://localhost:8000',
+                authorizationKey: 'secret',
               },
             }, function(err) {
               should.not.exist(err);
@@ -193,7 +245,7 @@ describe('Push notifications', function() {
       server.savePreferences({
         email: 'copayer1@domain.com',
         language: 'es',
-        unit: 'btc',
+        unit: 'dgb',
       }, function(err) {
         server.createAddress({}, function(err, address) {
           should.not.exist(err);
@@ -214,14 +266,14 @@ describe('Push notifications', function() {
 
               calls.length.should.equal(3);
 
-              args[0].body.android.data.title.should.contain('Nuevo pago recibido');
-              args[0].body.android.data.message.should.contain('0.123');
+              args[0].body.notification.title.should.contain('Nuevo pago recibido');
+              args[0].body.notification.body.should.contain('0.123');
 
-              args[1].body.android.data.title.should.contain('New payment received');
-              args[1].body.android.data.message.should.contain('123,000');
+              args[1].body.notification.title.should.contain('New payment received');
+              args[1].body.notification.body.should.contain('123,000');
 
-              args[2].body.android.data.title.should.contain('New payment received');
-              args[2].body.android.data.message.should.contain('123,000');
+              args[2].body.notification.title.should.contain('New payment received');
+              args[2].body.notification.body.should.contain('123,000');
               done();
             }, 100);
           });
@@ -275,9 +327,6 @@ describe('Push notifications', function() {
 
     it('should notify copayers a new tx proposal has been created', function(done) {
       helpers.stubUtxos(server, wallet, [1, 1], function() {
-        var txOpts = helpers.createSimpleProposalOpts('18PzpUFkFZE8zKWUPvfykkTxmB9oMR8qP7', 0.8, TestData.copayers[0].privKey_1H_0, {
-          message: 'some message'
-        });
         server.createAddress({}, function(err, address) {
           should.not.exist(err);
           server._notify('NewTxProposal', {
@@ -300,21 +349,27 @@ describe('Push notifications', function() {
 
     it('should notify copayers a tx has been finally rejected', function(done) {
       helpers.stubUtxos(server, wallet, 1, function() {
-        var txOpts = helpers.createSimpleProposalOpts('18PzpUFkFZE8zKWUPvfykkTxmB9oMR8qP7', 0.8, TestData.copayers[0].privKey_1H_0, {
-          message: 'some message'
-        });
+        var txOpts = {
+          outputs: [{
+            toAddress: '18PzpUFkFZE8zKWUPvfykkTxmB9oMR8qP7',
+            amount: 0.8e8
+          }],
+          feePerKb: 100e2
+        };
 
         var txpId;
         async.waterfall([
 
           function(next) {
-            server.createTxLegacy(txOpts, next);
+            helpers.createAndPublishTx(server, txOpts, TestData.copayers[0].privKey_1H_0, function(tx) {
+              next(null, tx);
+            });
           },
           function(txp, next) {
             txpId = txp.id;
             async.eachSeries(_.range(1, 3), function(i, next) {
               var copayer = TestData.copayers[i];
-              helpers.getAuthServer(copayer.id44, function(server) {
+              helpers.getAuthServer(copayer.id44dgb, function(server) {
                 server.rejectTx({
                   txProposalId: txp.id,
                 }, next);
@@ -330,9 +385,7 @@ describe('Push notifications', function() {
               return c.args[0];
             });
 
-            args[0].body.android.data.title.should.contain('Payment proposal rejected');
-            args[0].body.android.data.message.should.contain('copayer 2, copayer 3');
-            args[0].body.android.data.message.should.not.contain('copayer 1');
+            args[0].body.notification.title.should.contain('Payment proposal rejected');
             done();
           }, 100);
         });
@@ -341,21 +394,27 @@ describe('Push notifications', function() {
 
     it('should notify copayers a new outgoing tx has been created', function(done) {
       helpers.stubUtxos(server, wallet, 1, function() {
-        var txOpts = helpers.createSimpleProposalOpts('18PzpUFkFZE8zKWUPvfykkTxmB9oMR8qP7', 0.8, TestData.copayers[0].privKey_1H_0, {
-          message: 'some message'
-        });
+        var txOpts = {
+          outputs: [{
+            toAddress: '18PzpUFkFZE8zKWUPvfykkTxmB9oMR8qP7',
+            amount: 0.8e8
+          }],
+          feePerKb: 100e2
+        };
 
         var txp;
         async.waterfall([
 
           function(next) {
-            server.createTxLegacy(txOpts, next);
+            helpers.createAndPublishTx(server, txOpts, TestData.copayers[0].privKey_1H_0, function(tx) {
+              next(null, tx);
+            });
           },
           function(t, next) {
             txp = t;
             async.eachSeries(_.range(1, 3), function(i, next) {
               var copayer = TestData.copayers[i];
-              helpers.getAuthServer(copayer.id44, function(s) {
+              helpers.getAuthServer(copayer.id44dgb, function(s) {
                 server = s;
                 var signatures = helpers.clientSign(txp, copayer.xPrivKey_44H_0H_0H);
                 server.signTx({
@@ -383,11 +442,11 @@ describe('Push notifications', function() {
               return c.args[0];
             });
 
-            args[0].body.android.data.title.should.contain('Payment sent');
-            args[1].body.android.data.title.should.contain('Payment sent');
+            args[0].body.notification.title.should.contain('Payment sent');
+            args[1].body.notification.title.should.contain('Payment sent');
 
-            server.copayerId.should.not.equal((args[0].body.users[0]).split('$')[1]);
-            server.copayerId.should.not.equal((args[1].body.users[0]).split('$')[1]);
+            sjcl.codec.hex.fromBits(sjcl.hash.sha256.hash(server.copayerId)).should.not.equal(args[0].body.data.copayerId);
+            sjcl.codec.hex.fromBits(sjcl.hash.sha256.hash(server.copayerId)).should.not.equal(args[1].body.data.copayerId);
             done();
           }, 100);
         });
@@ -421,9 +480,10 @@ describe('Push notifications', function() {
             pushNotificationsOpts: {
               templatePath: './lib/templates',
               defaultLanguage: 'en',
-              defaultUnit: 'btc',
+              defaultUnit: 'dgb',
               subjectPrefix: '',
-              pushServerUrl: 'http://localhost:8000/send',
+              pushServerUrl: 'http://localhost:8000',
+              authorizationKey: 'secret',
             },
           }, function(err) {
             should.not.exist(err);
@@ -443,44 +503,54 @@ describe('Push notifications', function() {
           customData: 'custom data ' + (i + 1),
         });
 
-        server.joinWallet(copayerOpts, next);
+        server.joinWallet(copayerOpts, function(err, res) {
+          if (err) return next(err);
+
+          helpers.getAuthServer(res.copayerId, function(server) {
+            server.pushNotificationsSubscribe({
+              token: 'token:' + copayerOpts.name,
+              packageName: 'com.wallet',
+              platform: 'Android',
+            }, next);
+          });
+        });
       }, function(err) {
         should.not.exist(err);
         setTimeout(function() {
           var calls = requestStub.getCalls();
-          var args = _.map(calls, function(c) {
-            return c.args[0];
+          var args = _.filter(_.map(calls, function(call) {
+            return call.args[0];
+          }), function(arg) {
+            return arg.body.notification.title == 'New copayer';
           });
 
-          var argu = _.compact(_.map(args, function(a) {
-            if (a.body.android.data.title == 'New copayer')
-              return a;
-          }));
-
-          server.getWallet(null, function(err, w) {
+          server.getWallet(null, function(err, wallet) {
             /*
               First call - copayer2 joined
               copayer2 should notify to copayer1
               copayer2 should NOT be notifyed
             */
-            w.copayers[0].id.should.contain((argu[0].body.users[0]).split('$')[1]);
-            w.copayers[1].id.should.not.contain((argu[0].body.users[0]).split('$')[1]);
+            var hashedCopayerIds = _.map(wallet.copayers, function(copayer) {
+              return sjcl.codec.hex.fromBits(sjcl.hash.sha256.hash(copayer.id));
+            });
+            hashedCopayerIds[0].should.equal((args[0].body.data.copayerId));
+            hashedCopayerIds[1].should.not.equal((args[0].body.data.copayerId));
 
             /*
               Second call - copayer3 joined
               copayer3 should notify to copayer1
             */
-            w.copayers[0].id.should.contain((argu[1].body.users[0]).split('$')[1]);
+            hashedCopayerIds[0].should.equal((args[1].body.data.copayerId));
 
             /*
               Third call - copayer3 joined
               copayer3 should notify to copayer2
             */
-            w.copayers[1].id.should.contain((argu[2].body.users[0]).split('$')[1]);
+            hashedCopayerIds[1].should.equal((args[2].body.data.copayerId));
 
             // copayer3 should NOT notify any other copayer
-            w.copayers[2].id.should.not.contain((argu[1].body.users[0]).split('$')[1]);
-            w.copayers[2].id.should.not.contain((argu[2].body.users[0]).split('$')[1]);
+            hashedCopayerIds[2].should.not.equal((args[1].body.data.copayerId));
+            hashedCopayerIds[2].should.not.equal((args[2].body.data.copayerId));
             done();
           });
         }, 100);

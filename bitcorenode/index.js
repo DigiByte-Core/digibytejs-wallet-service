@@ -7,26 +7,25 @@ var https = require('https');
 var http = require('http');
 var async = require('async');
 var path = require('path');
-var bitcore = require('bitcore-lib');
-var Networks = bitcore.Networks;
+var digibyte = require('digibyte');
+var Networks = digibyte.Networks;
 var Locker = require('locker-server');
 var BlockchainMonitor = require('../lib/blockchainmonitor');
 var EmailService = require('../lib/emailservice');
 var ExpressApp = require('../lib/expressapp');
-var WsApp = require('../lib/wsapp');
 var child_process = require('child_process');
 var spawn = child_process.spawn;
 var EventEmitter = require('events').EventEmitter;
 var baseConfig = require('../config');
 
 /**
- * A Bitcore Node Service module
+ * A Digibytejs Node Service module
  * @param {Object} options
- * @param {Node} options.node - A reference to the Bitcore Node instance
+ * @param {Node} options.node - A reference to the Digibyte Node instance
 -* @param {Boolean} options.https - Enable https for this module, defaults to node settings.
- * @param {Number} options.bwsPort - Port for Bitcore Wallet Service API
- * @param {Number} options.messageBrokerPort - Port for BWS message broker
- * @param {Number} options.lockerPort - Port for BWS locker port
+ * @param {Number} options.dwsPort - Port for Digibyte Wallet Service API
+ * @param {Number} options.messageBrokerPort - Port for DWS message broker
+ * @param {Number} options.lockerPort - Port for DWS locker port
  */
 var Service = function(options) {
   EventEmitter.call(this);
@@ -34,7 +33,7 @@ var Service = function(options) {
   this.node = options.node;
   this.https = options.https || this.node.https;
   this.httpsOptions = options.httpsOptions || this.node.httpsOptions;
-  this.bwsPort = options.bwsPort || baseConfig.port;
+  this.dwsPort = options.dwsPort || baseConfig.port;
   this.messageBrokerPort = options.messageBrokerPort || 3380;
   if (baseConfig.lockOpts) {
     this.lockerPort = baseConfig.lockOpts.lockerServer.port;
@@ -44,7 +43,7 @@ var Service = function(options) {
 
 util.inherits(Service, EventEmitter);
 
-Service.dependencies = ['insight-api'];
+Service.dependencies = ['insight-digibyte-api'];
 
 /**
  * This method will read `key` and `cert` files from disk based on `httpsOptions` and
@@ -59,8 +58,6 @@ Service.prototype._readHttpsOptions = function() {
   var serverOpts = {};
   serverOpts.key = fs.readFileSync(this.httpsOptions.key);
   serverOpts.cert = fs.readFileSync(this.httpsOptions.cert);
-  serverOpts.ciphers = 'ECDHE-RSA-AES256-SHA:AES256-SHA:RC4-SHA:RC4:HIGH:!MD5:!aNULL:!EDH:!AESGCM';
-  serverOpts.honorCipherOrder = true;
 
   // This sets the intermediate CA certs only if they have all been designated in the config.js
   if (this.httpsOptions.CAinter1 && this.httpsOptions.CAinter2 && this.httpsOptions.CAroot) {
@@ -84,10 +81,10 @@ Service.prototype._getConfiguration = function() {
   var providerOptions = {
     provider: 'insight',
     url: (self.node.https ? 'https://' : 'http://') + 'localhost:' + self.node.port,
-    apiPrefix: '/insight-api'
+    apiPrefix: '/insight-digibyte-api'
   };
 
-  // A bitcore-node is either livenet or testnet, so we'll pass
+  // A digibyte-node is either livenet or testnet, so we'll pass
   // the configuration options to communicate via the local running
   // instance of the insight-api service.
   if (self.node.network === Networks.livenet) {
@@ -112,7 +109,6 @@ Service.prototype._getConfiguration = function() {
 Service.prototype._startWalletService = function(config, next) {
   var self = this;
   var expressApp = new ExpressApp();
-  var wsApp = new WsApp();
 
   if (self.https) {
     var serverOpts = self._readHttpsOptions();
@@ -121,19 +117,11 @@ Service.prototype._startWalletService = function(config, next) {
     self.server = http.Server(expressApp.app);
   }
 
-  async.parallel([
-
-    function(done) {
-      expressApp.start(config, done);
-    },
-    function(done) {
-      wsApp.start(self.server, config, done);
-    },
-  ], function(err) {
+  expressApp.start(config, function(err){
     if (err) {
       return next(err);
     }
-    self.server.listen(self.bwsPort, next);
+    self.server.listen(self.dwsPort, next);
   });
 };
 

@@ -1,10 +1,12 @@
 var config = {
-  basePath: '/bws/api',
+  basePath: '/dws/api',
   disableLogs: false,
   port: 3232,
-  // Uncomment to make BWS a forking server
+
+  // Uncomment to make DWS a forking server
   // cluster: true,
-  // Uncomment to use the nr of availalbe CPUs
+
+  // Uncomment to set the number or process (will use the nr of availalbe CPUs by default)
   // clusterInstances: 4,
 
   // https: true,
@@ -19,7 +21,7 @@ var config = {
 
   storageOpts: {
     mongoDb: {
-      uri: 'mongodb://localhost:27017/bws',
+      uri: 'mongodb://localhost:27017/dws',
     },
   },
   lockOpts: {
@@ -43,18 +45,21 @@ var config = {
     testnet: {
       provider: 'insight',
       url: 'https://test-insight.bitpay.com:443',
+      // Multiple servers (in priority order)
+      // url: ['http://a.b.c', 'https://test-insight.bitpay.com:443'],
     },
   },
   pushNotificationsOpts: {
     templatePath: './lib/templates',
     defaultLanguage: 'en',
-    defaultUnit: 'btc',
+    defaultUnit: 'dgb',
     subjectPrefix: '',
-    pushServerUrl: 'http://localhost:8000',
+    pushServerUrl: 'https://fcm.googleapis.com/fcm',
+    authorizationKey: '',
   },
   fiatRateServiceOpts: {
     defaultProvider: 'BitPay',
-    fetchInterval: 10, // in minutes
+    fetchInterval: 60, // in minutes
   },
   // To use email notifications uncomment this:
   // emailOpts: {
@@ -65,12 +70,18 @@ var config = {
   //  from: 'wallet-service@bitcore.io',
   //  templatePath: './lib/templates',
   //  defaultLanguage: 'en',
-  //  defaultUnit: 'btc',
+  //  defaultUnit: 'dgb',
   //  publicTxUrlTemplate: {
   //    livenet: 'https://insight.bitpay.com/tx/{{txid}}',
   //    testnet: 'https://test-insight.bitpay.com/tx/{{txid}}',
   //  },
   //},
-
+  //
+  // To use sendgrid:
+  // var sgTransport = require('nodemail-sendgrid-transport');
+  // mailer:sgTransport({
+  //  api_user: xxx,
+  //  api_key: xxx,
+  // });
 };
 module.exports = config;

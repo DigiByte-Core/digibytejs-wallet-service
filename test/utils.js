@@ -7,7 +7,7 @@ var should = chai.should();
 var Utils = require('../lib/common/utils');
 
 describe('Utils', function() {
-  describe('#checkRequired', function() {
+  describe('#getMissingFields', function() {
     it('should check required fields', function() {
       var obj = {
         id: 'id',
@@ -16,36 +16,36 @@ describe('Utils', function() {
       };
       var fixtures = [{
         args: 'id',
-        check: true
+        check: [],
       }, {
         args: ['id'],
-        check: true
+        check: []
       }, {
         args: ['id, name'],
-        check: false
+        check: ['id, name'],
       }, {
         args: ['id', 'name'],
-        check: true
+        check: []
       }, {
         args: 'array',
-        check: true
+        check: []
       }, {
         args: 'dummy',
-        check: false
+        check: ['dummy']
       }, {
         args: ['dummy1', 'dummy2'],
-        check: false
+        check: ['dummy1', 'dummy2']
       }, {
         args: ['id', 'dummy'],
-        check: false
+        check: ['dummy']
       }, ];
       _.each(fixtures, function(f) {
-        Utils.checkRequired(obj, f.args).should.equal(f.check);
+        Utils.getMissingFields(obj, f.args).should.deep.equal(f.check);
       });
     });
     it('should fail to check required fields on non-object', function() {
       var obj = 'dummy';
-      Utils.checkRequired(obj, 'name').should.be.false;
+      Utils.getMissingFields(obj, 'name').should.deep.equal(['name']);
     });
   });
 
@@ -85,7 +85,7 @@ describe('Utils', function() {
         args: [1, 'bit'],
         expected: '0',
       }, {
-        args: [1, 'btc'],
+        args: [1, 'dgb'],
         expected: '0.00',
       }, {
         args: [0, 'bit'],
@@ -94,19 +94,19 @@ describe('Utils', function() {
         args: [12345678, 'bit'],
         expected: '123,457',
       }, {
-        args: [12345678, 'btc'],
+        args: [12345678, 'dgb'],
         expected: '0.123457',
       }, {
-        args: [12345611, 'btc'],
+        args: [12345611, 'dgb'],
         expected: '0.123456',
       }, {
-        args: [1234, 'btc'],
+        args: [1234, 'dgb'],
         expected: '0.000012',
       }, {
-        args: [1299, 'btc'],
+        args: [1299, 'dgb'],
         expected: '0.000013',
       }, {
-        args: [1234567899999, 'btc'],
+        args: [1234567899999, 'dgb'],
         expected: '12,345.679',
       }, {
         args: [12345678, 'bit', {
@@ -114,12 +114,12 @@ describe('Utils', function() {
         }],
         expected: '123.457',
       }, {
-        args: [12345678, 'btc', {
+        args: [12345678, 'dgb', {
           decimalSeparator: ','
         }],
         expected: '0,123457',
       }, {
-        args: [1234567899999, 'btc', {
+        args: [1234567899999, 'dgb', {
           thousandsSeparator: ' ',
           decimalSeparator: ','
         }],
@@ -131,4 +131,36 @@ describe('Utils', function() {
       });
     });
   });
+
+  describe('#getAddressCoin', function() {
+    it('should identify dgb as coin for 1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA', function() {
+      Utils.getAddressCoin('1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA').should.equal('dgb');
+    });
+  });
+ 
+
+  describe('#translateAddress', function() {
+    it('should translate address from dgb to bch', function() {
+      var res = Utils.translateAddress('1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA', 'bch');
+      res.should.equal('CcJ4qUfyQ8x5NwhAeCQkrBSWVeXxXghcNz');
+    });
+    it('should translate address from bch to dgb', function() {
+      var res = Utils.translateAddress('HBf8isgS8EXG1r3X6GP89FmooUmiJ42wHS', 'dgb');
+      res.should.equal('36q2G5FMGvJbPgAVEaiyAsFGmpkhPKwk2r');
+    });
+ 
+    it('should keep the address if there is nothing to do (bch)', function() {
+      var res = Utils.translateAddress('CcJ4qUfyQ8x5NwhAeCQkrBSWVeXxXghcNz', 'bch');
+      res.should.equal('CcJ4qUfyQ8x5NwhAeCQkrBSWVeXxXghcNz');
+    });
+    it('should keep the address if there is nothing to do (dgb)', function() {
+      var res = Utils.translateAddress('1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA', 'dgb');
+      should.exist(res);
+      res.should.equal('1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA');
+    });
+
+
+
+  });
+  
 });

@@ -2,7 +2,7 @@
 
 var should = require('chai').should();
 var proxyquire = require('proxyquire');
-var bitcore = require('bitcore-lib');
+var digibyte = require('digibyte');
 var sinon = require('sinon');
 var Service = require('../bitcorenode');
 
@@ -26,7 +26,7 @@ describe('Bitcore Node Service', function() {
         key: 'key',
         cert: 'cert'
       });
-      service.bwsPort.should.equal(3232);
+      service.dwsPort.should.equal(3232);
       service.messageBrokerPort.should.equal(3380);
       service.lockerPort.should.equal(3231);
     });
@@ -46,7 +46,7 @@ describe('Bitcore Node Service', function() {
         key: 'key',
         cert: 'cert'
       });
-      service.bwsPort.should.equal(3232);
+      service.dwsPort.should.equal(3232);
       service.messageBrokerPort.should.equal(3380);
       service.lockerPort.should.equal(3231);
     });
@@ -54,12 +54,12 @@ describe('Bitcore Node Service', function() {
       var node = {};
       var options = {
         node: node,
-        bwsPort: 1000,
+        dwsPort: 1000,
         messageBrokerPort: 1001,
         lockerPort: 1002
       };
       var service = new Service(options);
-      service.bwsPort.should.equal(1000);
+      service.dwsPort.should.equal(1000);
       service.messageBrokerPort.should.equal(1001);
       service.lockerPort.should.equal(1002);
     });
@@ -109,7 +109,7 @@ describe('Bitcore Node Service', function() {
     it('livenet local insight', function() {
       var options = {
         node: {
-          network: bitcore.Networks.livenet,
+          network: digibyte.Networks.livenet,
           port: 3001
         }
       };
@@ -124,7 +124,7 @@ describe('Bitcore Node Service', function() {
     it('testnet local insight', function() {
       var options = {
         node: {
-          network: bitcore.Networks.testnet,
+          network: digibyte.Networks.testnet,
           port: 3001
         }
       };
@@ -138,45 +138,6 @@ describe('Bitcore Node Service', function() {
     });
   });
   describe('#_startWalletService', function() {
-    it('will start express and web socket servers', function(done) {
-      function TestExpressApp() {}
-      TestExpressApp.prototype.start = sinon.stub().callsArg(1);
-      function TestWSApp() {}
-      TestWSApp.prototype.start = sinon.stub().callsArg(2);
-      var listen = sinon.stub().callsArg(1);
-      var TestService = proxyquire('../bitcorenode', {
-        '../lib/expressapp': TestExpressApp,
-        '../lib/wsapp': TestWSApp,
-        'http': {
-          Server: sinon.stub().returns({
-            listen: listen
-          })
-        }
-      });
-      var options = {
-        node: {
-          bwsPort: 3232
-        }
-      };
-      var service = new TestService(options);
-      var config = {};
-      service._startWalletService(config, function(err) {
-        if (err) {
-          throw err;
-        }
-        TestExpressApp.prototype.start.callCount.should.equal(1);
-        TestExpressApp.prototype.start.args[0][0].should.equal(config);
-        TestExpressApp.prototype.start.args[0][1].should.be.a('function');
-        TestWSApp.prototype.start.callCount.should.equal(1);
-        TestWSApp.prototype.start.args[0][0].should.equal(service.server);
-        TestWSApp.prototype.start.args[0][1].should.equal(config);
-        TestWSApp.prototype.start.args[0][2].should.be.a('function');
-        listen.callCount.should.equal(1);
-        listen.args[0][0].should.equal(3232);
-        listen.args[0][1].should.be.a('function');
-        done();
-      });
-    });
     it('error from express', function(done) {
       function TestExpressApp() {}
       TestExpressApp.prototype.start = sinon.stub().callsArgWith(1, new Error('test'));
@@ -194,34 +155,7 @@ describe('Bitcore Node Service', function() {
       });
       var options = {
         node: {
-          bwsPort: 3232
-        }
-      };
-      var service = new TestService(options);
-      var config = {};
-      service._startWalletService(config, function(err) {
-        err.message.should.equal('test');
-        done();
-      });
-    });
-    it('error from web socket', function(done) {
-      function TestExpressApp() {}
-      TestExpressApp.prototype.start = sinon.stub().callsArg(1);
-      function TestWSApp() {}
-      TestWSApp.prototype.start = sinon.stub().callsArgWith(2, new Error('test'));
-      var listen = sinon.stub().callsArg(1);
-      var TestService = proxyquire('../bitcorenode', {
-        '../lib/expressapp': TestExpressApp,
-        '../lib/wsapp': TestWSApp,
-        'http': {
-          Server: sinon.stub().returns({
-            listen: listen
-          })
-        }
-      });
-      var options = {
-        node: {
-          bwsPort: 3232
+          dwsPort: 3232
         }
       };
       var service = new TestService(options);
@@ -254,7 +188,7 @@ describe('Bitcore Node Service', function() {
       });
       var options = {
         node: {
-          bwsPort: 3232
+          dwsPort: 3232
         }
       };
       var service = new TestService(options);
@@ -291,7 +225,7 @@ describe('Bitcore Node Service', function() {
       var options = {
         node: {
           https: true,
-          bwsPort: 3232
+          dwsPort: 3232
         }
       };
       var service = new TestService(options);

@@ -1,11 +1,11 @@
-The following document is a step-by-step guide to run BWS.
+The following document is a step-by-step guide to run DWS.
 
 ### Prerequisites
 Ensure MongoDB (2.6+) is installed and running. This document assumes that mongod is running at the default port 27017.
 See the configuration section to configure a different host/port.
 
-### Install BWS from NPM
-Use the following steps to Install BWS from the npmjs repository and run it with defaults.
+### Install DWS from NPM
+Use the following steps to Install DWS from the npmjs repository and run it with defaults.
 ```bash
 npm install bitcore-wallet-service
 cd bitcore-wallet-service
@@ -15,11 +15,11 @@ To change configuration before running, see the Configuration section.
 npm start
 ```
 
-### Install BWS from github source
-Use the following steps to Install BWS from github source and run it with defaults.
+### Install DWS from github source
+Use the following steps to Install DWS from github source and run it with defaults.
 ```bash
-git clone https://github.com/bitpay/bitcore-wallet-service.git
-cd bitcore-wallet-service
+git clone https://github.com/digibyte/digibytejs-wallet-service.git
+cd digibytejs-wallet-service
 npm install
 ```
 To change configuration before running, see the Configuration section.
@@ -27,21 +27,21 @@ To change configuration before running, see the Configuration section.
 npm start
 ```
 ### Configuration
-Configuration for all required modules can be specified in https://github.com/bitpay/bitcore-wallet-service/blob/master/config.js
+Configuration for all required modules can be specified in https://github.com/digibyte/digibytejs-wallet-service/blob/master/config.js
 
-BWS is composed of 5 separate node services -
+DWS is composed of 5 separate node services -
 Locker - locker/locker.js
 Message Broker - messagebroker/messagebroker.js
 Blockchain Monitor - bcmonitor/bcmonitor.js (This service talks to the Blockchain Explorer service configured under blockchainExplorerOpts - see Configure blockchain service below.)
 Email Service - emailservice/emailservice.js
-Bitcore Wallet Service - bws.js
+Digibytejs Wallet Service - dws.js
 
 #### Configure MongoDB
 Example configuration for connecting to the MongoDB instance:
 ```javascript
   storageOpts: {
     mongoDb: {
-      uri: 'mongodb://localhost:27017/bws',
+      uri: 'mongodb://localhost:27017/dws',
     },
   }
 ```
@@ -67,7 +67,7 @@ Example configuration for connecting to message broker service:
 ```
 
 #### Configure blockchain service
-Note: this service will be used by blockchain monitor service as well as by BWS itself.
+Note: this service will be used by blockchain monitor service as well as by DWS itself.
 An example of this configuration is:
 ```javascript
   blockchainExplorerOpts: {

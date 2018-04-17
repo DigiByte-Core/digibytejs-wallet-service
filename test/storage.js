@@ -54,6 +54,7 @@ describe('Storage', function() {
         name: 'my wallet',
         m: 2,
         n: 3,
+        network: 'livenet',
       });
       should.exist(wallet);
       storage.storeWallet(wallet, function(err) {
@@ -85,6 +86,7 @@ describe('Storage', function() {
         name: 'my wallet',
         m: 2,
         n: 3,
+        network: 'livenet',
       });
       _.each(_.range(3), function(i) {
         var copayer = Model.Copayer.create({
@@ -127,6 +129,8 @@ describe('Storage', function() {
         name: 'my wallet',
         m: 2,
         n: 3,
+
+        network: 'livenet',
       });
       _.each(_.range(3), function(i) {
         var copayer = Model.Copayer.create({
@@ -142,13 +146,20 @@ describe('Storage', function() {
         should.not.exist(err);
 
         proposals = _.map(_.range(4), function(i) {
-          var tx = Model.TxProposalLegacy.create({
+          var tx = Model.TxProposal.create({
             walletId: '123',
-            toAddress: '18PzpUFkFZE8zKWUPvfykkTxmB9oMR8qP7',
+            network: 'livenet',
+            outputs: [{
+              toAddress: '18PzpUFkFZE8zKWUPvfykkTxmB9oMR8qP7',
+              amount: i + 100,
+            }],
+            feePerKb: 100e2,
             creatorId: wallet.copayers[0].id,
-            amount: i + 100,
           });
           if (i % 2 == 0) {
+            tx.status = 'pending';
+            tx.isPending().should.be.true;
+          } else {
             tx.status = 'rejected';
             tx.isPending().should.be.false;
           }
@@ -190,8 +201,8 @@ describe('Storage', function() {
         should.exist(txs);
         txs.length.should.equal(2);
         txs = _.sortBy(txs, 'amount');
-        txs[0].amount.should.equal(101);
-        txs[1].amount.should.equal(103);
+        txs[0].amount.should.equal(100);
+        txs[1].amount.should.equal(102);
         done();
       });
     });
