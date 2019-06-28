@@ -306,6 +306,9 @@ helpers.stubUtxos = function(server, wallet, amounts, opts, cb) {
           case Constants.SCRIPT_TYPES.P2PKH:
             scriptPubKey = S.buildPublicKeyHashOut(address.address);
             break;
+          case Constants.SCRIPT_TYPES.P2WPKH:
+            scriptPubKey = S.buildPublicKeyHashOut(address.address);
+            break;
         }
         should.exist(scriptPubKey);
 
