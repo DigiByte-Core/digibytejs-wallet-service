@@ -159,7 +159,7 @@ var aTXP = function(type) {
     "requiredSignatures": 2,
     "requiredRejections": 1,
     "walletN": 2,
-    "addressType": "P2SH",
+    "addressType": "P2WSH",
     "status": "pending",
     "actions": [],
     "fee": 10000,

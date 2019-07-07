@@ -17,13 +17,27 @@ describe('Copayer', function() {
     });
   });
   describe('#createAddress', function() {
-    it('should create an address', function() {
+    it('should create a P2SH address', function() {
+      testWallet.addressType = 'P2SH';
       var w = Wallet.fromObj(testWallet);
       var c = Copayer.fromObj(testWallet.copayers[2]);
       should.exist(c.requestPubKeys);
       c.requestPubKeys.length.should.equal(1);
       var a1 = c.createAddress(w, true);
-      a1.address.should.equal('3AXmDe2FkWY9g5LpRaTs1U7pXKtkNm3NBf');
+      a1.address.should.equal('SW8kKwJxvyQy7DRqqunM8juT2aqTeab37J');
+      a1.path.should.equal('m/2/1/0');
+      a1.createdOn.should.be.above(1);
+      var a2 = c.createAddress(w, true);
+      a2.path.should.equal('m/2/1/1');
+    });
+    it('should create a P2WSH address', function() {
+      testWallet.addressType = 'P2WSH';
+      var w = Wallet.fromObj(testWallet);
+      var c = Copayer.fromObj(testWallet.copayers[2]);
+      should.exist(c.requestPubKeys);
+      c.requestPubKeys.length.should.equal(1);
+      var a1 = c.createAddress(w, true);
+      a1.address.should.equal('dgb1qs96xvj5jafrjz2faurgja8frg5dv0m2zv0zdpfg3ae7txzhe0unqxt4rct');
       a1.path.should.equal('m/2/1/0');
       a1.createdOn.should.be.above(1);
       var a2 = c.createAddress(w, true);

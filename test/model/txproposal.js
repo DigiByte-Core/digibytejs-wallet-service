@@ -114,11 +114,11 @@ var aTxpOpts = function() {
     message: 'some message'
   };
   opts.outputs = [{
-    toAddress: "18PzpUFkFZE8zKWUPvfykkTxmB9oMR8qP7",
+    toAddress: "dgbt1qc2jh63z0adg9pmz3t0ygs0zgt79yfmrsu88qy4",
     amount: 10000000,
     message: "first message"
   }, {
-    toAddress: "18PzpUFkFZE8zKWUPvfykkTxmB9oMR8qP7",
+    toAddress: "dgbt1qc2jh63z0adg9pmz3t0ygs0zgt79yfmrsu88qy4",
     amount: 20000000,
     message: "second message"
   }, ];
@@ -160,7 +160,7 @@ var aTXP = function() {
     "requiredSignatures": 2,
     "requiredRejections": 1,
     "walletN": 2,
-    "addressType": "P2SH",
+    "addressType": "P2WSH",
     "status": "pending",
     "actions": [],
     "fee": 10000,
